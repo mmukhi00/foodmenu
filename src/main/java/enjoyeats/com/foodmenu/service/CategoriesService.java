@@ -1,5 +1,13 @@
 package enjoyeats.com.foodmenu.service;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
 import enjoyeats.com.foodmenu.constants.Constants;
 import enjoyeats.com.foodmenu.dto.CategorieDTO;
 import enjoyeats.com.foodmenu.dto.MenuItemsDTO;
@@ -11,22 +19,10 @@ import enjoyeats.com.foodmenu.model.MenuItems;
 import enjoyeats.com.foodmenu.repo.CategoriesRepo;
 import enjoyeats.com.foodmenu.repo.IngredientsRepo;
 import enjoyeats.com.foodmenu.repo.MenuItemsRepo;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.GetMapping;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
-
 
 @Service
 public class CategoriesService {
+
     @Autowired
     CategoriesRepo categoriesRepo;
     @Autowired
@@ -34,100 +30,81 @@ public class CategoriesService {
     @Autowired
     IngredientsRepo ingredientsRepo;
 
-    public ResponseDTO saveCategories(Categories category)
-
-    {
+    // Save category with it's menu items
+    public ResponseDTO saveCategories(Categories category) {
         Categories savedData;
-        ResponseDTO responseDTO=new  ResponseDTO();
-
-        //  get category if exists
-        Optional<Categories> result= categoriesRepo.findByCategoryName(category.getCategoryName());
-
-
+        ResponseDTO responseDTO = new ResponseDTO();
+        Optional<Categories> result = categoriesRepo.findByCategoryName(category.getCategoryName());
 
         // save only category
-        if(category.getMenuItems()==null){
-            if(result.isPresent()){
+        if (category.getMenuItems() == null) {
+            if (result.isPresent()) {
                 responseDTO.setId(result.get().getCategoryId());
-            }
-            else{
-                savedData= categoriesRepo.save(category);
-                if(categoriesRepo.existsById(savedData.getCategoryId())){
+            } else {
+                savedData = categoriesRepo.save(category);
+                if (categoriesRepo.existsById(savedData.getCategoryId())) {
                     responseDTO.setId(savedData.getCategoryId());
-
                 }
             }
             responseDTO.setMessage(Constants.CREATED);
             return responseDTO;
         }
 
+        List<MenuItems> menuItems = category.getMenuItems();
 
-        List<MenuItems> menuItems= category.getMenuItems();
+        // map item with ingredients ids
+        menuItems.stream().forEach(item -> {
 
-       // map item with ingredients ids
-        menuItems.stream().forEach(item->
-        {
-            List<Long> ingre= item.getIngredients();
-            List<MenuItemIngredients>menuingredients=item.getMenuingredients();
+            List<Long> ingre = item.getIngredients();
+            List<MenuItemIngredients> menuingredients = item.getMenuingredients();
+            Optional<List<Ingredients>> ingreIds = ingredientsRepo.findById(ingre);
 
-          List<Ingredients> ingreIds= ingredientsRepo.findById(ingre);
-
-          List<Long> ingredientsIds=ingreIds.stream().map(value->value.getIngredientId()).collect(Collectors.toList());
-            for( Long value:ingredientsIds)
-            {
-                MenuItemIngredients i=new MenuItemIngredients();
+            List<Long> ingredientsIds = ingreIds.get().stream().map(value -> value.getIngredientId()).collect(Collectors.toList());
+            for (Long value : ingredientsIds) {
+                MenuItemIngredients i = new MenuItemIngredients();
                 i.setIngredientId(value);
                 menuingredients.add(i);
             }
 
         });
 
-
-        if(result.isPresent()) {
-            menuItems.stream().forEach(value->result.get().getMenuItems().add(value));
-
-            savedData=categoriesRepo.save(result.get());
-        }
-        else {
-            savedData= categoriesRepo.save(category);
+        if (result.isPresent()) {
+            menuItems.stream().forEach(value -> result.get().getMenuItems().add(value));
+            savedData = categoriesRepo.save(result.get());
+        } else {
+            savedData = categoriesRepo.save(category);
         }
 
-        if(categoriesRepo.existsById(savedData.getCategoryId())){
+        if (categoriesRepo.existsById(savedData.getCategoryId())) {
             responseDTO.setId(savedData.getCategoryId());
             responseDTO.setMessage(Constants.CREATED);
         }
 
- return  responseDTO;
+        return responseDTO;
 
     }
 
-
-//    get Items
-    public CategorieDTO getSelectedItem(long id){
+    // Get selected Items
+    public CategorieDTO getSelectedItem(long id) {
         {
-            CategorieDTO categorieDTO=new CategorieDTO();
+            CategorieDTO categorieDTO = new CategorieDTO();
 
-            if(!categoriesRepo.existsById(id)) {
-                categorieDTO.setCategoryName(null);
-                return  categorieDTO;
-            }
-
-            Optional<Categories> items= categoriesRepo.findById(id);
-            if( items.isEmpty()) {
+            Optional<Categories> items = categoriesRepo.findById(id);
+            if (items.isEmpty()) {
                 return categorieDTO;
             }
 
-            List<MenuItemsDTO> menuItemsDTOS=new ArrayList<>();
+            List<MenuItemsDTO> menuItemsDTOS = new ArrayList<>();
 
-            List<MenuItems> menuItems= items.get().getMenuItems();
-            menuItems.stream().forEach(item->
-            {
-                List<MenuItemIngredients>menuingredients=item.getMenuingredients();
-                List<Long> ids=menuingredients.stream().map(value->value.getIngredientId()).collect(Collectors.toList());
-                List<Ingredients> ingreIds= ingredientsRepo.findById(ids);
-                List<String> ingredientsNames=ingreIds.stream().map(value->value.getIngredientName()).collect(Collectors.toList());
+            List<MenuItems> menuItems = items.get().getMenuItems();
+            menuItems.stream().forEach(item
+                    -> {
+                List<MenuItemIngredients> menuingredients = item.getMenuingredients();
+                List<Long> ids = menuingredients.stream().map(value -> value.getIngredientId()).collect(Collectors.toList());
+                Optional<List<Ingredients>> ingreIds = ingredientsRepo.findById(ids);
+                List<String> ingredientsNames = ingreIds.get().stream().map(value -> value.getIngredientName()).collect(Collectors.toList());
 
-                MenuItemsDTO menuItemsDTO=new MenuItemsDTO();
+                MenuItemsDTO menuItemsDTO = new MenuItemsDTO();
                 menuItemsDTO.setId(item.getItemId());
                 menuItemsDTO.setItemName(item.getItemName());
                 menuItemsDTO.setIngredientName(ingredientsNames);
@@ -147,38 +124,38 @@ public class CategoriesService {
 
     }
 
-    public List<CategorieDTO> getAllItems()
-    {
-        List<Categories> categoriesList= categoriesRepo.findAll();
+    //Get all items   
+    public List<CategorieDTO> getAllItems() {
+        List<Categories> categoriesList = categoriesRepo.findAll();
 
-        List<CategorieDTO> result =new ArrayList<>();
+        List<CategorieDTO> result = new ArrayList<>();
 
-        categoriesList.stream().forEach(items->{
-            List<MenuItemsDTO> menuItemsDTOS=new ArrayList<>();
-            CategorieDTO categorieDTO= new CategorieDTO();
-        List<MenuItems> menuItems= items.getMenuItems();
-        menuItems.stream().forEach(item->
-        {
+        categoriesList.stream().forEach(items -> {
+            List<MenuItemsDTO> menuItemsDTOS = new ArrayList<>();
+            CategorieDTO categorieDTO = new CategorieDTO();
+            List<MenuItems> menuItems = items.getMenuItems();
+            menuItems.stream().forEach(item
+                    -> {
 
-            List<MenuItemIngredients>menuingredients=item.getMenuingredients();
-            List<Long> ids=menuingredients.stream().map(value->value.getIngredientId()).collect(Collectors.toList());
-            List<Ingredients> ingreIds= ingredientsRepo.findById(ids);
-            List<String> ingredientsNames=ingreIds.stream().map(value->value.getIngredientName()).collect(Collectors.toList());
+                List<MenuItemIngredients> menuingredients = item.getMenuingredients();
+                List<Long> ids = menuingredients.stream().map(value -> value.getIngredientId()).collect(Collectors.toList());
+                Optional<List<Ingredients>> ingreIds = ingredientsRepo.findById(ids);
+                List<String> ingredientsNames = ingreIds.get().stream().map(value -> value.getIngredientName()).collect(Collectors.toList());
 
-            MenuItemsDTO menuItemsDTO=new MenuItemsDTO();
-            menuItemsDTO.setId(item.getItemId());
-            menuItemsDTO.setItemName(item.getItemName());
-            menuItemsDTO.setIngredientName(ingredientsNames);
-            menuItemsDTO.setDescription(item.getDescription());
-            menuItemsDTO.setPrice(item.getPrice());
+                MenuItemsDTO menuItemsDTO = new MenuItemsDTO();
+                menuItemsDTO.setId(item.getItemId());
+                menuItemsDTO.setItemName(item.getItemName());
+                menuItemsDTO.setIngredientName(ingredientsNames);
+                menuItemsDTO.setDescription(item.getDescription());
+                menuItemsDTO.setPrice(item.getPrice());
 
-            menuItemsDTOS.add(menuItemsDTO);
+                menuItemsDTOS.add(menuItemsDTO);
 
-        });
+            });
 
-        categorieDTO.setId(items.getCategoryId());
-        categorieDTO.setCategoryName(items.getCategoryName());
-        categorieDTO.setMenuItems(menuItemsDTOS);
+            categorieDTO.setId(items.getCategoryId());
+            categorieDTO.setCategoryName(items.getCategoryName());
+            categorieDTO.setMenuItems(menuItemsDTOS);
 
             result.add(categorieDTO);
         });
@@ -186,34 +163,34 @@ public class CategoriesService {
         return result;
     }
 
+    //Delete category
+    public String deleteCategory(long id) {
 
-//    delete data
-
-    public String deleteCategory(long id){
-
-        if(!categoriesRepo.existsById(id)){
-            return  Constants.NO_DATA_FOUND;
+        if (!categoriesRepo.existsById(id)) {
+            return Constants.NO_DATA_FOUND;
         }
         categoriesRepo.deleteById(id);
         return Constants.DELETED;
-
     }
 
+    //Delete all category
+    public String deleteAllCategories() {
+        categoriesRepo.deleteAll();
+        return Constants.DELETED;
+    }
 
-//    update
+    //Update category
+    public ResponseDTO updateCategory(long id, Categories categories) {
 
-    public ResponseDTO updateCategory(long id,Categories categories){
+        Categories category = categoriesRepo.findById(id).orElseThrow(() -> new RuntimeException(Constants.NO_DATA_FOUND));
+        ResponseDTO responseDTO = new ResponseDTO();
 
-      Categories category=  categoriesRepo.findById(id).orElseThrow(()->new RuntimeException("Id not found"));
-      ResponseDTO responseDTO=new ResponseDTO();
-       if(categories.getCategoryName()!=null){
-           category.setCategoryName(categories.getCategoryName());
-       }
+        category.setCategoryName(categories.getCategoryName());
 
-       categoriesRepo.save(category);
+        categoriesRepo.save(category);
         responseDTO.setId(category.getCategoryId());
         responseDTO.setMessage(Constants.DATA_UPDATED);
-       return  responseDTO;
+        return responseDTO;
     }
 
 }
