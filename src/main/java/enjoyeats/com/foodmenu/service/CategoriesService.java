@@ -84,7 +84,7 @@ public class CategoriesService {
 
     }
 
-    // Get selected Items
+    // Get selected Category
     public CategorieDTO getSelectedItem(long id) {
         {
             CategorieDTO categorieDTO = new CategorieDTO();

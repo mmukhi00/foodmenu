@@ -1,5 +1,18 @@
 package enjoyeats.com.foodmenu;
 
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
 import enjoyeats.com.foodmenu.constants.Constants;
 import enjoyeats.com.foodmenu.dto.CategorieDTO;
 import enjoyeats.com.foodmenu.dto.ItemUpdateDTO;
@@ -7,28 +20,12 @@ import enjoyeats.com.foodmenu.dto.MenuItemsDTO;
 import enjoyeats.com.foodmenu.dto.ResponseDTO;
 import enjoyeats.com.foodmenu.model.Categories;
 import enjoyeats.com.foodmenu.model.Ingredients;
-import enjoyeats.com.foodmenu.repo.CategoriesRepo;
-import enjoyeats.com.foodmenu.repo.IngredientsRepo;
-import enjoyeats.com.foodmenu.repo.MenuItemsRepo;
 import enjoyeats.com.foodmenu.service.CategoriesService;
 import enjoyeats.com.foodmenu.service.IngredientsService;
 import enjoyeats.com.foodmenu.service.MenuItemsService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 public class Controller {
-
-    @Autowired
-    CategoriesRepo categoriesRepo;
-    @Autowired
-    MenuItemsRepo menuItemsRepo;
-    @Autowired
-    IngredientsRepo ingredientsRepo;
 
     @Autowired
     CategoriesService categoriesService;
@@ -44,20 +41,28 @@ public class Controller {
         ResponseDTO responseDTO = categoriesService.saveCategories(category);
 
         if (!responseDTO.getMessage().equals(Constants.CREATED)) {
-            return new ResponseEntity<ResponseDTO>(responseDTO, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(responseDTO, HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return new ResponseEntity<ResponseDTO>(responseDTO, HttpStatus.CREATED);
+        return new ResponseEntity<>(responseDTO, HttpStatus.CREATED);
+    }
+
+    @PostMapping("/addIngredient")
+    public ResponseEntity<ResponseDTO> addIngredient(@RequestBody Ingredients ingredients) {
+
+        ResponseDTO responseDTO = ingredientsService.saveIngredient(ingredients);
+
+        if (responseDTO.getMessage().equals(Constants.NOT_CREATED)) {
+            return new ResponseEntity<>(responseDTO, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return new ResponseEntity<>(responseDTO, HttpStatus.CREATED);
     }
 
     @PostMapping("/addIngredients")
-    public ResponseEntity<ResponseDTO> addIngredients(@RequestBody Ingredients ingredients) {
+    public ResponseEntity<List<Ingredients>> addIngredients(@RequestBody List<Ingredients> ingredients) {
 
-        ResponseDTO responseDTO = ingredientsService.saveIngredients(ingredients);
+        List<Ingredients> ingredientList = ingredientsService.saveAllIngredients(ingredients);
 
-        if (responseDTO.getMessage().equals(Constants.NOT_CREATED)) {
-            return new ResponseEntity<ResponseDTO>(responseDTO, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-        return new ResponseEntity<ResponseDTO>(responseDTO, HttpStatus.CREATED);
+        return new ResponseEntity<>(ingredientList, HttpStatus.CREATED);
     }
 
     /* Fetch APIs */
@@ -68,6 +73,15 @@ public class Controller {
             return new ResponseEntity<>(categorieDTO, HttpStatus.NOT_FOUND);
         }
         return new ResponseEntity<>(categorieDTO, HttpStatus.FOUND);
+    }
+
+    @GetMapping("/getSelectedDish/{id}")
+    public ResponseEntity<MenuItemsDTO> getSelectedDish(@PathVariable long id) {
+        MenuItemsDTO menuItemsDTO = menuItemsService.getSelectedDish(id);
+        if (menuItemsDTO.getItemName() == null) {
+            return new ResponseEntity<>(menuItemsDTO, HttpStatus.NOT_FOUND);
+        }
+        return new ResponseEntity<>(menuItemsDTO, HttpStatus.FOUND);
     }
 
     @GetMapping("/getItems")
@@ -88,7 +102,7 @@ public class Controller {
         return new ResponseEntity<>(ingredients, HttpStatus.FOUND);
     }
 
-    /* Delete APIS */
+    /* Delete APIs */
     @DeleteMapping("/deleteCategory/{id}")
     public ResponseEntity<String> deleteCategory(@PathVariable long id) {
 
@@ -135,11 +149,11 @@ public class Controller {
     @DeleteMapping("/deleteIngredients")
     public ResponseEntity<String> deleteAllIngredient() {
         String message = ingredientsService.deleteAllIngredients();
-        return new ResponseEntity<String>(message, HttpStatus.OK);
+        return new ResponseEntity<>(message, HttpStatus.OK);
     }
 
 
-    /* Update APIS */
+    /* Update APIs */
     @PatchMapping("/updateCategory/{id}")
     public ResponseEntity<ResponseDTO> updateCategory(@PathVariable long id, @RequestBody Categories categories) {
 
@@ -160,7 +174,6 @@ public class Controller {
         if (responseDTO.getMessage().equals(Constants.NO_DATA_FOUND)) {
             return new ResponseEntity<>(responseDTO, HttpStatus.NOT_FOUND);
         }
-
         return new ResponseEntity<>(responseDTO, HttpStatus.OK);
     }
 }

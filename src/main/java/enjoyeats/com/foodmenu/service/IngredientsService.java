@@ -1,5 +1,6 @@
 package enjoyeats.com.foodmenu.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -42,6 +43,23 @@ public class IngredientsService {
         return responseDTO;
     }
 
+    // Save ingredient
+    public List<Ingredients> saveAllIngredients(List<Ingredients> ingredients) {
+        ResponseDTO responseDTO = new ResponseDTO();
+        List<Ingredients> ingredientsNotPresent = new ArrayList<>();
+
+        ingredients.stream().forEach((item) -> {
+            Optional<Ingredients> ingredient = ingredientsRepo.findByIngredientName(item.getIngredientName());
+            if (!ingredient.isPresent()) {
+                ingredientsNotPresent.add(item);
+            }
+        });
+
+        List<Ingredients> savedIngredients = ingredientsRepo.saveAll(ingredientsNotPresent);
+
+        return savedIngredients;
+    }
+
     // Update ingredient
     public ResponseDTO updateIngredients(long id, Ingredients ingredients) {
 
@@ -54,7 +72,7 @@ public class IngredientsService {
             responseDTO.setMessage(Constants.NO_DATA_FOUND);
             return responseDTO;
         }
-        
+
         ingredient.get().setIngredientName(ingredients.getIngredientName());
 
         ingredientsRepo.save(ingredient.get());
@@ -97,6 +115,7 @@ public class IngredientsService {
         return responseDTO;
     }
 
+    // Delete ingredients
     public String deleteAllIngredients() {
         ingredientsRepo.deleteAll();
         menuItemIngredientsRepo.deleteAll();

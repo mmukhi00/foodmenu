@@ -47,9 +47,8 @@ public class MenuItemsService {
         if (item.getUpdateExisting() != null && item.getIngredientIds() != null && !item.getIngredientIds().isEmpty()) {
             Optional<List<Ingredients>> ingredients = ingredientsRepo.findById(item.getIngredientIds());
 
-//          clear the list of existing ingredients
+            // clear the list of existing ingredients
             if (!item.getUpdateExisting()) {
-
                 menuItemIngredientsRepo.deleteByMenuId(menuItem.getItemId());
             }
 
@@ -85,6 +84,32 @@ public class MenuItemsService {
         }
         menuItemsRepo.deleteById(id);
         return Constants.DELETED;
+
+    }
+
+    // Get selected item
+    public MenuItemsDTO getSelectedDish(long id) {
+        {
+            MenuItemsDTO menuItemsDTO = new MenuItemsDTO();
+
+            Optional<MenuItems> item = menuItemsRepo.findById(id);
+            if (item.isEmpty()) {
+                return menuItemsDTO;
+            }
+
+            List<MenuItemIngredients> menuingredients = item.get().getMenuingredients();
+            List<Long> ids = menuingredients.stream().map(value -> value.getIngredientId()).collect(Collectors.toList());
+            Optional<List<Ingredients>> ingreIds = ingredientsRepo.findById(ids);
+            List<String> ingredientsNames = ingreIds.get().stream().map(value -> value.getIngredientName()).collect(Collectors.toList());
+
+            menuItemsDTO.setId(item.get().getItemId());
+            menuItemsDTO.setItemName(item.get().getItemName());
+            menuItemsDTO.setIngredientName(ingredientsNames);
+            menuItemsDTO.setDescription(item.get().getDescription());
+            menuItemsDTO.setPrice(item.get().getPrice());
+
+            return menuItemsDTO;
+        }
 
     }
 }
